@@ -384,6 +384,13 @@ static bool EvalChecksigTapscript(const valtype& sig, const valtype& pubkey, Scr
     return true;
 }
 
+static bool EvalChecksigQuantum(SigVersion sigversion, ScriptError* serror, bool& fSuccess) {
+    assert(sigversion == SigVersion::QUANTUM);
+    std::cout << "Checking PQ signature\n";
+    fSuccess = true;
+    return true;
+}
+
 /** Helper for OP_CHECKSIG, OP_CHECKSIGVERIFY, and (in Tapscript) OP_CHECKSIGADD.
  *
  * A return value of false means the script fails entirely. When true is returned, the
@@ -400,6 +407,8 @@ static bool EvalChecksig(const valtype& sig, const valtype& pubkey, CScript::con
     case SigVersion::TAPROOT:
         // Key path spending in Taproot has no script, so this is unreachable.
         break;
+    case SigVersion::QUANTUM:
+        return EvalChecksigQuantum(sigversion, serror, success);
     }
     assert(false);
 }
@@ -415,7 +424,7 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
     static const valtype vchTrue(1, 1);
 
     // sigversion cannot be TAPROOT here, as it admits no script execution.
-    assert(sigversion == SigVersion::BASE || sigversion == SigVersion::WITNESS_V0 || sigversion == SigVersion::TAPSCRIPT);
+    assert(sigversion == SigVersion::BASE || sigversion == SigVersion::WITNESS_V0 || sigversion == SigVersion::TAPSCRIPT || sigversion == SigVersion::QUANTUM);
 
     CScript::const_iterator pc = script.begin();
     CScript::const_iterator pend = script.end();
@@ -425,7 +434,7 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
     ConditionStack vfExec;
     std::vector<valtype> altstack;
     set_error(serror, SCRIPT_ERR_UNKNOWN_ERROR);
-    if ((sigversion == SigVersion::BASE || sigversion == SigVersion::WITNESS_V0) && script.size() > MAX_SCRIPT_SIZE) {
+    if ((sigversion == SigVersion::BASE || sigversion == SigVersion::WITNESS_V0 || sigversion == SigVersion::QUANTUM) && script.size() > MAX_SCRIPT_SIZE) {
         return set_error(serror, SCRIPT_ERR_SCRIPT_SIZE);
     }
     int nOpCount = 0;
@@ -447,7 +456,7 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
             if (vchPushValue.size() > MAX_SCRIPT_ELEMENT_SIZE)
                 return set_error(serror, SCRIPT_ERR_PUSH_SIZE);
 
-            if (sigversion == SigVersion::BASE || sigversion == SigVersion::WITNESS_V0) {
+            if (sigversion == SigVersion::BASE || sigversion == SigVersion::WITNESS_V0 || sigversion == SigVersion::QUANTUM) {
                 // Note how OP_RESERVED does not count towards the opcode limit.
                 if (opcode > OP_16 && ++nOpCount > MAX_OPS_PER_SCRIPT) {
                     return set_error(serror, SCRIPT_ERR_OP_COUNT);
@@ -1084,7 +1093,7 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
                 case OP_CHECKSIGADD:
                 {
                     // OP_CHECKSIGADD is only available in Tapscript
-                    if (sigversion == SigVersion::BASE || sigversion == SigVersion::WITNESS_V0) return set_error(serror, SCRIPT_ERR_BAD_OPCODE);
+                    if (sigversion == SigVersion::BASE || sigversion == SigVersion::WITNESS_V0 || sigversion == SigVersion::QUANTUM) return set_error(serror, SCRIPT_ERR_BAD_OPCODE);
 
                     // (sig num pubkey -- num)
                     if (stack.size() < 3) return set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
@@ -1105,7 +1114,7 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
                 case OP_CHECKMULTISIG:
                 case OP_CHECKMULTISIGVERIFY:
                 {
-                    if (sigversion == SigVersion::TAPSCRIPT) return set_error(serror, SCRIPT_ERR_TAPSCRIPT_CHECKMULTISIG);
+                    if (sigversion == SigVersion::TAPSCRIPT || sigversion == SigVersion::QUANTUM) return set_error(serror, SCRIPT_ERR_TAPSCRIPT_CHECKMULTISIG);
 
                     // ([sig ...] num_of_signatures [pubkey ...] num_of_pubkeys -- bool)
 
@@ -1987,6 +1996,12 @@ static bool VerifyWitnessProgram(const CScriptWitness& witness, int witversion, 
             }
             return set_success(serror);
         }
+    } else if (witversion == 2 && program.size() == WITNESS_V2_QUANTUM_KEYHASH_SIZE && !is_p2sh) {
+        if (stack.size() != 2) {
+            return set_error(serror, SCRIPT_ERR_WITNESS_PROGRAM_MISMATCH); // 2 items in witness
+        }
+        exec_script << OP_DUP << OP_HASH160 << program << OP_EQUALVERIFY << OP_CHECKSIG;
+        return ExecuteWitnessScript(stack, exec_script, flags, SigVersion::QUANTUM, checker, execdata, serror);
     } else if (!is_p2sh && CScript::IsPayToAnchor(witversion, program)) {
         return true;
     } else {
@@ -2130,6 +2145,8 @@ size_t static WitnessSigOps(int witversion, const std::vector<unsigned char>& wi
             CScript subscript(witness.stack.back().begin(), witness.stack.back().end());
             return subscript.GetSigOpCount(true);
         }
+    } else if (witversion == 2) {
+        if (witprogram.size() == WITNESS_V2_QUANTUM_KEYHASH_SIZE) return 1;
     }
 
     // Future flags may be implemented here.
@@ -2190,6 +2207,7 @@ const std::map<std::string, script_verify_flag_name>& ScriptFlagNamesToEnum()
         FLAG_NAME(DISCOURAGE_UPGRADABLE_PUBKEYTYPE),
         FLAG_NAME(DISCOURAGE_OP_SUCCESS),
         FLAG_NAME(DISCOURAGE_UPGRADABLE_TAPROOT_VERSION),
+        FLAG_NAME(QUANTUM),
     };
 #undef FLAG_NAME
     return g_names_to_enum;

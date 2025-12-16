@@ -145,6 +145,9 @@ enum class script_verify_flag_name : uint8_t {
     // Making unknown public key versions (in BIP 342 scripts) non-standard
     SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_PUBKEYTYPE,
 
+    // Quantum signature verification
+    SCRIPT_VERIFY_QUANTUM,
+
     // Constants to point to the highest flag in use. Add new flags above this line.
     //
     SCRIPT_VERIFY_END_MARKER
@@ -203,6 +206,7 @@ enum class SigVersion
     WITNESS_V0 = 1,  //!< Witness v0 (P2WPKH and P2WSH); see BIP 141
     TAPROOT = 2,     //!< Witness v1 with 32-byte program, not BIP16 P2SH-wrapped, key path spending; see BIP 341
     TAPSCRIPT = 3,   //!< Witness v1 with 32-byte program, not BIP16 P2SH-wrapped, script path spending, leaf version 0xc0; see BIP 342
+    QUANTUM = 4,     //!< Post Quantum proof signature
 };
 
 struct ScriptExecutionData
@@ -237,6 +241,7 @@ struct ScriptExecutionData
 static constexpr size_t WITNESS_V0_SCRIPTHASH_SIZE = 32;
 static constexpr size_t WITNESS_V0_KEYHASH_SIZE = 20;
 static constexpr size_t WITNESS_V1_TAPROOT_SIZE = 32;
+static constexpr size_t WITNESS_V2_QUANTUM_KEYHASH_SIZE = 20; // length of pub key hash
 
 static constexpr uint8_t TAPROOT_LEAF_MASK = 0xfe;
 static constexpr uint8_t TAPROOT_LEAF_TAPSCRIPT = 0xc0;

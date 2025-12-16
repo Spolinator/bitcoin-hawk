@@ -38,18 +38,18 @@ MutableTransactionSignatureCreator::MutableTransactionSignatureCreator(const CMu
 
 bool MutableTransactionSignatureCreator::CreateSig(const SigningProvider& provider, std::vector<unsigned char>& vchSig, const CKeyID& address, const CScript& scriptCode, SigVersion sigversion) const
 {
-    assert(sigversion == SigVersion::BASE || sigversion == SigVersion::WITNESS_V0);
+    assert(sigversion == SigVersion::BASE || sigversion == SigVersion::WITNESS_V0 || sigversion == SigVersion::QUANTUM);
 
     CKey key;
     if (!provider.GetKey(address, key))
         return false;
 
     // Signing with uncompressed keys is disabled in witness scripts
-    if (sigversion == SigVersion::WITNESS_V0 && !key.IsCompressed())
+    if ((sigversion == SigVersion::WITNESS_V0 || sigversion == SigVersion::QUANTUM) && !key.IsCompressed())
         return false;
 
     // Signing without known amount does not work in witness scripts.
-    if (sigversion == SigVersion::WITNESS_V0 && !MoneyRange(amount)) return false;
+    if ((sigversion == SigVersion::WITNESS_V0 || sigversion == SigVersion::QUANTUM) && !MoneyRange(amount)) return false;
 
     // BASE/WITNESS_V0 signatures don't support explicit SIGHASH_DEFAULT, use SIGHASH_ALL instead.
     const int hashtype = nHashType == SIGHASH_DEFAULT ? SIGHASH_ALL : nHashType;

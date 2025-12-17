@@ -263,7 +263,7 @@ bool FillableSigningProvider::GetCScript(const CScriptID &hash, CScript& redeemS
 CKeyID GetKeyForDestination(const SigningProvider& store, const CTxDestination& dest)
 {
     // Only supports destinations which map to single public keys:
-    // P2PKH, P2WPKH, P2SH-P2WPKH, P2TR
+    // P2PKH, P2WPKH, P2SH-P2WPKH, P2TR, P2WQKH
     if (auto id = std::get_if<PKHash>(&dest)) {
         return ToKeyID(*id);
     }
@@ -289,6 +289,9 @@ CKeyID GetKeyForDestination(const SigningProvider& store, const CTxDestination& 
             && store.GetPubKeyByXOnly(spenddata.internal_key, pub)) {
             return pub.GetID();
         }
+    }
+    if (auto witness_id = std::get_if<WitnessV2QuantumKeyHash>(&dest)) {
+        return ToKeyID(*witness_id);
     }
     return CKeyID();
 }

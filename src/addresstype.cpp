@@ -39,6 +39,11 @@ CKeyID ToKeyID(const WitnessV0KeyHash& key_hash)
     return CKeyID{uint160{key_hash}};
 }
 
+CKeyID ToKeyID(const WitnessV2QuantumKeyHash& key_hash)
+{
+    return CKeyID{uint160{key_hash}};
+}
+
 CScriptID ToScriptID(const ScriptHash& script_hash)
 {
     return CScriptID{uint160{script_hash}};

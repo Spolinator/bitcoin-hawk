@@ -1444,7 +1444,7 @@ protected:
     }
 public:
     QPKHDescriptor(std::unique_ptr<PubkeyProvider> prov) : DescriptorImpl(Vector(std::move(prov)), "qpkh") {}
-    std::optional<OutputType> GetOutputType() const override { return OutputType::BECH32; }
+    std::optional<OutputType> GetOutputType() const override { return OutputType::BECH32M; }
     bool IsSingleType() const final { return true; }
 
     std::optional<int64_t> ScriptSize() const override { return 1 + 1 + 20; }

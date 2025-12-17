@@ -65,6 +65,14 @@ public:
         return bech32::Encode(bech32::Encoding::BECH32M, m_params.Bech32HRP(), data);
     }
 
+    std::string operator()(const WitnessV2QuantumKeyHash& id) const
+    {
+        std::vector<unsigned char> data = {2};
+        data.reserve(33);
+        ConvertBits<8, 5, true>([&](unsigned char c) { data.push_back(c); }, id.begin(), id.end());
+        return bech32::Encode(bech32::Encoding::BECH32M, m_params.Bech32HRP(), data);
+    }
+
     std::string operator()(const WitnessUnknown& id) const
     {
         const std::vector<unsigned char>& program = id.GetWitnessProgram();
@@ -179,6 +187,16 @@ CTxDestination DecodeDestination(const std::string& str, const CChainParams& par
                 WitnessV1Taproot tap;
                 std::copy(data.begin(), data.end(), tap.begin());
                 return tap;
+            }
+
+            if (version == 2 && data.size() == WITNESS_V2_QUANTUM_KEYHASH_SIZE) {
+                WitnessV2QuantumKeyHash keyid;
+                if (data.size() == keyid.size()) {
+                    std::copy(data.begin(), data.end(), keyid.begin());
+                    return keyid;
+                }
+                error_str = strprintf("Invalid Bech32 v2 address program size (%d %s)", data.size(), byte_str);
+                return CNoDestination();
             }
 
             if (CScript::IsPayToAnchor(version, data)) {

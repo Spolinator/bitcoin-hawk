@@ -98,6 +98,7 @@ struct WitnessV2QuantumKeyHash : public BaseHash<uint160>
     explicit WitnessV2QuantumKeyHash(const CPubKey& pubkey);
     explicit WitnessV2QuantumKeyHash(const PKHash& pubkey_hash);
 };
+CKeyID ToKeyID(const WitnessV2QuantumKeyHash& key_hash);
 
 //! CTxDestination subtype to encode any future Witness version
 struct WitnessUnknown

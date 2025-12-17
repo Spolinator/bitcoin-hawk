@@ -705,6 +705,10 @@ static bool SignStep(const SigningProvider& provider, const BaseSignatureCreator
     case TxoutType::WITNESS_V1_TAPROOT:
         return SignTaproot(provider, creator, WitnessV1Taproot(XOnlyPubKey{vSolutions[0]}), sigdata, ret);
 
+    case TxoutType::WITNESS_V2_QUANTUM_KEYHASH:
+        ret.push_back(vSolutions[0]);
+        return true;
+
     case TxoutType::ANCHOR:
         return true;
     } // no default case, so the compiler can warn about missing cases
@@ -786,6 +790,15 @@ bool ProduceSignature(const SigningProvider& provider, const BaseSignatureCreato
         if (solved) {
             sigdata.scriptWitness.stack = std::move(result);
         }
+        result.clear();
+    } else if (solved && whichType == TxoutType::WITNESS_V2_QUANTUM_KEYHASH)
+    {
+        CScript witnessscript;
+        witnessscript << OP_DUP << OP_HASH160 << ToByteVector(result[0]) << OP_EQUALVERIFY << OP_CHECKSIG;
+        TxoutType subType;
+        solved = solved && SignStep(provider, creator, witnessscript, result, subType, SigVersion::QUANTUM, sigdata);
+        sigdata.scriptWitness.stack = result;
+        sigdata.witness = true;
         result.clear();
     } else if (solved && whichType == TxoutType::WITNESS_UNKNOWN) {
         sigdata.witness = true;

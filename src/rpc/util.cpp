@@ -326,6 +326,16 @@ public:
         return obj;
     }
 
+    UniValue operator()(const WitnessV2QuantumKeyHash& id) const
+    {
+        UniValue obj(UniValue::VOBJ);
+        obj.pushKV("isscript", false);
+        obj.pushKV("iswitness", true);
+        obj.pushKV("witness_version", 2);
+        obj.pushKV("witness_program", HexStr(id));
+        return obj;
+    }
+
     UniValue operator()(const PayToAnchor& anchor) const
     {
         UniValue obj(UniValue::VOBJ);

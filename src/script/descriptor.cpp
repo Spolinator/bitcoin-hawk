@@ -1433,6 +1433,39 @@ public:
     }
 };
 
+/** A parsed qpkh(P) descriptor. */
+class QPKHDescriptor final : public DescriptorImpl
+{
+protected:
+    std::vector<CScript> MakeScripts(const std::vector<CPubKey>& keys, std::span<const CScript>, FlatSigningProvider&) const override
+    {
+        CKeyID id = keys[0].GetID();
+        return Vector(GetScriptForDestination(WitnessV2QuantumKeyHash(id)));
+    }
+public:
+    QPKHDescriptor(std::unique_ptr<PubkeyProvider> prov) : DescriptorImpl(Vector(std::move(prov)), "qpkh") {}
+    std::optional<OutputType> GetOutputType() const override { return OutputType::BECH32; }
+    bool IsSingleType() const final { return true; }
+
+    std::optional<int64_t> ScriptSize() const override { return 1 + 1 + 20; }
+
+    std::optional<int64_t> MaxSatSize(bool use_max_sig) const override {
+        const auto sig_size = use_max_sig ? 72 : 71;
+        return (1 + sig_size + 1 + 33);
+    }
+
+    std::optional<int64_t> MaxSatisfactionWeight(bool use_max_sig) const override {
+        return MaxSatSize(use_max_sig);
+    }
+
+    std::optional<int64_t> MaxSatisfactionElems() const override { return 2; }
+
+    std::unique_ptr<DescriptorImpl> Clone() const override
+    {
+        return std::make_unique<QPKHDescriptor>(m_pubkey_args.at(0)->Clone());
+    }
+};
+
 /* We instantiate Miniscript here with a simple integer as key type.
  * The value of these key integers are an index in the
  * DescriptorImpl::m_pubkey_args vector.
@@ -1620,6 +1653,7 @@ enum class ParseScriptContext {
     P2WSH,   //!< Inside wsh() (script becomes v0 witness script)
     P2TR,    //!< Inside tr() (either internal key, or BIP342 script leaf)
     MUSIG,   //!< Inside musig() (implies P2TR, cannot have nested musig())
+    P2QPKH,  //!< Inside qpkh() (no script, pubkey only)
 };
 
 std::optional<uint32_t> ParseKeyPathNum(std::span<const char> elem, bool& apostrophe, std::string& error, bool& has_hardened)
@@ -2450,6 +2484,21 @@ std::vector<std::unique_ptr<DescriptorImpl>> ParseScript(uint32_t& key_exp_index
         error = "Can only have rawtr at top level";
         return {};
     }
+    if ((ctx == ParseScriptContext::TOP || ctx == ParseScriptContext::P2SH) && Func("qpkh", expr)) {
+        auto pubkeys = ParsePubkey(key_exp_index, expr, ParseScriptContext::P2QPKH, out, error);
+        if (pubkeys.empty()) {
+            error = strprintf("qpkh(): %s", error);
+            return {};
+        }
+        key_exp_index++;
+        for (auto& pubkey : pubkeys) {
+            ret.emplace_back(std::make_unique<QPKHDescriptor>(std::move(pubkey)));
+        }
+        return ret;
+    } else if (Func("qpkh", expr)) {
+        error = "Can only have qpkh() at top level or inside sh()";
+        return {};
+    }
     if (ctx == ParseScriptContext::TOP && Func("raw", expr)) {
         std::string str(expr.begin(), expr.end());
         if (!IsHex(str)) {
@@ -2674,6 +2723,16 @@ std::unique_ptr<DescriptorImpl> InferScript(const CScript& script, ParseScriptCo
             auto key = InferXOnlyPubkey(pubkey, ParseScriptContext::P2TR, provider);
             if (key) {
                 return std::make_unique<RawTRDescriptor>(std::move(key));
+            }
+        }
+    }
+    if (txntype == TxoutType::WITNESS_V2_QUANTUM_KEYHASH && (ctx == ParseScriptContext::TOP || ctx == ParseScriptContext::P2SH)) {
+        uint160 hash(data[0]);
+        CKeyID keyid(hash);
+        CPubKey pubkey;
+        if (provider.GetPubKey(keyid, pubkey)) {
+            if (auto pubkey_provider = InferPubkey(pubkey, ParseScriptContext::P2QPKH, provider)) {
+                return std::make_unique<QPKHDescriptor>(std::move(pubkey_provider));
             }
         }
     }

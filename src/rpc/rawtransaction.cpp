@@ -503,6 +503,7 @@ static RPCHelpMan decodescript()
         case TxoutType::PUBKEYHASH:
         case TxoutType::WITNESS_V0_KEYHASH:
         case TxoutType::WITNESS_V0_SCRIPTHASH:
+        case TxoutType::WITNESS_V2_QUANTUM_KEYHASH:
             // Can be wrapped if the checks below pass
             break;
         case TxoutType::NULL_DATA:
@@ -552,6 +553,7 @@ static RPCHelpMan decodescript()
             case TxoutType::WITNESS_V0_KEYHASH:
             case TxoutType::WITNESS_V0_SCRIPTHASH:
             case TxoutType::WITNESS_V1_TAPROOT:
+            case TxoutType::WITNESS_V2_QUANTUM_KEYHASH:
             case TxoutType::ANCHOR:
                 // Should not be wrapped
                 return false;

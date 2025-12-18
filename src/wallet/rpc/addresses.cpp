@@ -348,6 +348,16 @@ public:
         return obj;
     }
 
+    UniValue operator()(const WitnessV2QuantumKeyHash& id) const
+    {
+        UniValue obj(UniValue::VOBJ);
+        CPubKey pubkey;
+        if (provider && provider->GetPubKey(ToKeyID(id), pubkey)) {
+            obj.pushKV("pubkey", HexStr(pubkey));
+        }
+        return obj;
+    }
+
     UniValue operator()(const WitnessV1Taproot& id) const { return UniValue(UniValue::VOBJ); }
     UniValue operator()(const PayToAnchor& id) const { return UniValue(UniValue::VOBJ); }
     UniValue operator()(const WitnessUnknown& id) const { return UniValue(UniValue::VOBJ); }

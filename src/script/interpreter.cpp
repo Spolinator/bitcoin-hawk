@@ -1623,7 +1623,7 @@ uint256 SignatureHash(const CScript& scriptCode, const T& txTo, unsigned int nIn
 {
     assert(nIn < txTo.vin.size());
 
-    if (sigversion != SigVersion::WITNESS_V0) {
+    if (sigversion != SigVersion::WITNESS_V0 && sigversion != SigVersion::QUANTUM) {
         // Check for invalid use of SIGHASH_SINGLE
         if ((nHashType & 0x1f) == SIGHASH_SINGLE) {
             if (nIn >= txTo.vout.size()) {
@@ -1642,7 +1642,7 @@ uint256 SignatureHash(const CScript& scriptCode, const T& txTo, unsigned int nIn
         return ss.GetHash();
     }
 
-    if (sigversion == SigVersion::WITNESS_V0) {
+    if (sigversion == SigVersion::WITNESS_V0 || sigversion == SigVersion::QUANTUM) {
         uint256 hashPrevouts;
         uint256 hashSequence;
         uint256 hashOutputs;

@@ -384,10 +384,21 @@ static bool EvalChecksigTapscript(const valtype& sig, const valtype& pubkey, Scr
     return true;
 }
 
-static bool EvalChecksigQuantum(SigVersion sigversion, ScriptError* serror, bool& fSuccess) {
+static bool EvalChecksigQuantum(const valtype& sig, const valtype& pubkey, script_verify_flags flags, const BaseSignatureChecker& checker, SigVersion sigversion, ScriptError* serror, bool& fSuccess) {
     assert(sigversion == SigVersion::QUANTUM);
-    std::cout << "Checking PQ signature\n";
-    fSuccess = true;
+
+    if (pubkey.empty()) {
+        return set_error(serror, SCRIPT_ERR_QUANTUM_EMPTY_PUBKEY);
+    }
+    if (pubkey.size() != QUANTUM_PUBKEY_SIZE) {
+        return set_error(serror, SCRIPT_ERR_QUANTUM_PUBKEY_SIZE);
+    }
+
+    fSuccess = checker.CheckQuantumSignature(sig, pubkey, sigversion);
+
+    if (!fSuccess && (flags & SCRIPT_VERIFY_NULLFAIL) && sig.size())
+        return set_error(serror, SCRIPT_ERR_SIG_NULLFAIL);
+
     return true;
 }
 
@@ -408,7 +419,7 @@ static bool EvalChecksig(const valtype& sig, const valtype& pubkey, CScript::con
         // Key path spending in Taproot has no script, so this is unreachable.
         break;
     case SigVersion::QUANTUM:
-        return EvalChecksigQuantum(sigversion, serror, success);
+        return EvalChecksigQuantum(sig, pubkey, flags, checker, sigversion, serror, success);
     }
     assert(false);
 }
@@ -1698,6 +1709,12 @@ bool GenericTransactionSignatureChecker<T>::VerifySchnorrSignature(std::span<con
 }
 
 template <class T>
+bool GenericTransactionSignatureChecker<T>::VerifyQuantumSignature(const std::vector<unsigned char>& vchSig, const CPubKey& pubkey, const uint256& sighash) const
+{
+    return pubkey.VerifyQuantum(sighash, vchSig);
+}
+
+template <class T>
 bool GenericTransactionSignatureChecker<T>::CheckECDSASignature(const std::vector<unsigned char>& vchSigIn, const std::vector<unsigned char>& vchPubKey, const CScript& scriptCode, SigVersion sigversion) const
 {
     CPubKey pubkey(vchPubKey);
@@ -1747,6 +1764,32 @@ bool GenericTransactionSignatureChecker<T>::CheckSchnorrSignature(std::span<cons
         return set_error(serror, SCRIPT_ERR_SCHNORR_SIG_HASHTYPE);
     }
     if (!VerifySchnorrSignature(sig, pubkey, sighash)) return set_error(serror, SCRIPT_ERR_SCHNORR_SIG);
+    return true;
+}
+
+template <class T>
+bool GenericTransactionSignatureChecker<T>::CheckQuantumSignature(const std::vector<unsigned char>& vchSigIn, const std::vector<unsigned char>& vchPubKey, const CScript& scriptCode, SigVersion sigversion) const
+{
+    CPubKey pubkey(vchPubKey);
+    if (!pubkey.IsValid())
+        return false;
+
+    // Hash type is one byte tacked on to the end of the signature
+    std::vector<unsigned char> vchSig(vchSigIn);
+    if (vchSig.empty())
+        return false;
+
+    int nHashType = vchSig.back();
+    vchSig.pop_back();
+
+    // Witness sighashes need the amount.
+    if (sigversion == SigVersion::QUANTUM && amount < 0) return HandleMissingData(m_mdb);
+
+    uint256 sighash = SignatureHash(scriptCode, *txTo, nIn, nHashType, amount, sigversion, this->txdata, &m_sighash_cache);
+
+    if (!VerifyQuantumSignature(vchSig, pubkey, sighash))
+        return false;
+
     return true;
 }
 

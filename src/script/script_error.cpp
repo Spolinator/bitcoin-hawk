@@ -117,6 +117,10 @@ std::string ScriptErrorString(const ScriptError serror)
             return "Using OP_CODESEPARATOR in non-witness script";
         case SCRIPT_ERR_SIG_FINDANDDELETE:
             return "Signature is found in scriptCode";
+        case SCRIPT_ERR_QUANTUM_EMPTY_PUBKEY:
+            return "Empty public key in post-quantum script";
+        case SCRIPT_ERR_QUANTUM_PUBKEY_SIZE:
+            return "Invalid post-quantum public key size";
         case SCRIPT_ERR_UNKNOWN_ERROR:
         case SCRIPT_ERR_ERROR_COUNT:
         default: break;

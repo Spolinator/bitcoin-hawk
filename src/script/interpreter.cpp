@@ -384,7 +384,7 @@ static bool EvalChecksigTapscript(const valtype& sig, const valtype& pubkey, Scr
     return true;
 }
 
-static bool EvalChecksigQuantum(const valtype& sig, const valtype& pubkey, script_verify_flags flags, const BaseSignatureChecker& checker, SigVersion sigversion, ScriptError* serror, bool& fSuccess) {
+static bool EvalChecksigQuantum(const valtype& sig, const valtype& pubkey, CScript::const_iterator pbegincodehash, CScript::const_iterator pend, script_verify_flags flags, const BaseSignatureChecker& checker, SigVersion sigversion, ScriptError* serror, bool& fSuccess) {
     assert(sigversion == SigVersion::QUANTUM);
 
     if (pubkey.empty()) {
@@ -394,7 +394,9 @@ static bool EvalChecksigQuantum(const valtype& sig, const valtype& pubkey, scrip
         return set_error(serror, SCRIPT_ERR_QUANTUM_PUBKEY_SIZE);
     }
 
-    fSuccess = checker.CheckQuantumSignature(sig, pubkey, sigversion);
+    CScript scriptCode(pbegincodehash, pend);
+
+    fSuccess = checker.CheckQuantumSignature(sig, pubkey, scriptCode, sigversion);
 
     if (!fSuccess && (flags & SCRIPT_VERIFY_NULLFAIL) && sig.size())
         return set_error(serror, SCRIPT_ERR_SIG_NULLFAIL);
@@ -419,7 +421,7 @@ static bool EvalChecksig(const valtype& sig, const valtype& pubkey, CScript::con
         // Key path spending in Taproot has no script, so this is unreachable.
         break;
     case SigVersion::QUANTUM:
-        return EvalChecksigQuantum(sig, pubkey, flags, checker, sigversion, serror, success);
+        return EvalChecksigQuantum(sig, pubkey, pbegincodehash, pend, flags, checker, sigversion, serror, success);
     }
     assert(false);
 }
@@ -1709,9 +1711,9 @@ bool GenericTransactionSignatureChecker<T>::VerifySchnorrSignature(std::span<con
 }
 
 template <class T>
-bool GenericTransactionSignatureChecker<T>::VerifyQuantumSignature(const std::vector<unsigned char>& vchSig, const CPubKey& pubkey, const uint256& sighash) const
+bool GenericTransactionSignatureChecker<T>::VerifyQuantumSignature(const std::vector<unsigned char>& vchSigIn, const CQuantumPubKey& pubkey, const uint256& sighash) const
 {
-    return pubkey.VerifyQuantum(sighash, vchSig);
+    return pubkey.VerifyQuantum(sighash, vchSigIn);
 }
 
 template <class T>
@@ -1768,9 +1770,9 @@ bool GenericTransactionSignatureChecker<T>::CheckSchnorrSignature(std::span<cons
 }
 
 template <class T>
-bool GenericTransactionSignatureChecker<T>::CheckQuantumSignature(const std::vector<unsigned char>& vchSigIn, const std::vector<unsigned char>& vchPubKey, const CScript& scriptCode, SigVersion sigversion) const
+bool GenericTransactionSignatureChecker<T>::CheckQuantumSignature(const std::vector<unsigned char>& vchSigIn, std::span<const unsigned char> pubkey_in, const CScript& scriptCode, SigVersion sigversion) const
 {
-    CPubKey pubkey(vchPubKey);
+    CQuantumPubKey pubkey{pubkey_in};
     if (!pubkey.IsValid())
         return false;
 

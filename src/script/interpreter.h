@@ -23,6 +23,7 @@ class CPubKey;
 class CScript;
 class CScriptNum;
 class XOnlyPubKey;
+class CQuantumPubKey;
 struct CScriptWitness;
 
 /** Signature hash types/flags */
@@ -292,7 +293,7 @@ public:
         return false;
     }
 
-    virtual bool CheckQuantumSignature(const std::vector<unsigned char>& scriptSig, const std::vector<unsigned char>& vchPubKey, const CScript& scriptCode, SigVersion sigversion) const
+    virtual bool CheckQuantumSignature(const std::vector<unsigned char>& vchSigIn, std::span<const unsigned char> pubkey, const CScript& scriptCode, SigVersion sigversion) const
     {
         return false;
     }
@@ -336,14 +337,14 @@ private:
 protected:
     virtual bool VerifyECDSASignature(const std::vector<unsigned char>& vchSig, const CPubKey& vchPubKey, const uint256& sighash) const;
     virtual bool VerifySchnorrSignature(std::span<const unsigned char> sig, const XOnlyPubKey& pubkey, const uint256& sighash) const;
-    virtual bool VerifyQuantumSignature(const std::vector<unsigned char>& vchSig, const CPubKey& vchPubKey, const uint256& sighash) const;
+    virtual bool VerifyQuantumSignature(const std::vector<unsigned char>& vchSigIn, const CQuantumPubKey& pubkey, const uint256& sighash) const;
 
 public:
     GenericTransactionSignatureChecker(const T* txToIn, unsigned int nInIn, const CAmount& amountIn, MissingDataBehavior mdb) : txTo(txToIn), m_mdb(mdb), nIn(nInIn), amount(amountIn), txdata(nullptr) {}
     GenericTransactionSignatureChecker(const T* txToIn, unsigned int nInIn, const CAmount& amountIn, const PrecomputedTransactionData& txdataIn, MissingDataBehavior mdb) : txTo(txToIn), m_mdb(mdb), nIn(nInIn), amount(amountIn), txdata(&txdataIn) {}
     bool CheckECDSASignature(const std::vector<unsigned char>& scriptSig, const std::vector<unsigned char>& vchPubKey, const CScript& scriptCode, SigVersion sigversion) const override;
     bool CheckSchnorrSignature(std::span<const unsigned char> sig, std::span<const unsigned char> pubkey, SigVersion sigversion, ScriptExecutionData& execdata, ScriptError* serror = nullptr) const override;
-    bool CheckQuantumSignature(const std::vector<unsigned char>& scriptSig, const std::vector<unsigned char>& vchPubKey, const CScript& scriptCode, SigVersion sigversion) const override;
+    bool CheckQuantumSignature(const std::vector<unsigned char>& vchSigIn, std::span<const unsigned char> pubkey, const CScript& scriptCode, SigVersion sigversion) const override;
     bool CheckLockTime(const CScriptNum& nLockTime) const override;
     bool CheckSequence(const CScriptNum& nSequence) const override;
 };
@@ -369,9 +370,9 @@ public:
         return m_checker.CheckSchnorrSignature(sig, pubkey, sigversion, execdata, serror);
     }
 
-    bool CheckQuantumSignature(const std::vector<unsigned char>& scriptSig, const std::vector<unsigned char>& vchPubKey, const CScript& scriptCode, SigVersion sigversion) const override
+    bool CheckQuantumSignature(const std::vector<unsigned char>& vchSigIn, std::span<const unsigned char> pubkey, const CScript& scriptCode, SigVersion sigversion) const override
     {
-        return m_checker.CheckQuantumSignature(scriptSig, vchPubKey, scriptCode, sigversion);
+        return m_checker.CheckQuantumSignature(vchSigIn, pubkey, scriptCode, sigversion);
     }
 
     bool CheckLockTime(const CScriptNum& nLockTime) const override

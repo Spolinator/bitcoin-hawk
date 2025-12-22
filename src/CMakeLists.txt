@@ -25,6 +25,8 @@ if (ENABLE_IPC AND NOT WITH_EXTERNAL_LIBMULTIPROCESS)
 endif()
 include(../cmake/secp256k1.cmake)
 add_secp256k1(secp256k1)
+include(../cmake/hawk.cmake)
+add_hawk(hawk)
 
 # Set top-level target output locations.
 if(NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
@@ -76,6 +78,7 @@ target_link_libraries(bitcoin_consensus
     core_interface
     bitcoin_crypto
     secp256k1
+    hawk
 )
 
 if(WITH_ZMQ)
@@ -144,6 +147,7 @@ target_link_libraries(bitcoin_common
     bitcoin_util
     univalue
     secp256k1
+    hawk
     Boost::headers
     $<TARGET_NAME_IF_EXISTS:USDT::headers>
     $<$<PLATFORM_ID:Windows>:ws2_32>

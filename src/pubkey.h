@@ -367,4 +367,52 @@ struct CExtPubKey {
     [[nodiscard]] bool Derive(CExtPubKey& out, unsigned int nChild, uint256* bip32_tweak_out = nullptr) const;
 };
 
+class CQuantumPubKey {
+public:
+    /**
+     * HAWK-512:
+     */
+    static constexpr unsigned int SIZE                   = 1024;
+    static constexpr unsigned int SIGNATURE_SIZE         = 555;
+
+private:
+    std::array<std::byte, SIZE> m_pubkey;
+    static inline const int LOGN = 9;       // Constant defining the HAWK algorithm: 9 -> HAWK-512
+
+public:
+    bool static ValidSize(const std::vector<unsigned char> &vch) {
+        return vch.size() > 0 && vch.size() == SIZE;
+    }
+
+    /** Default constructor creates all-zero pubkey (which is valid). */
+    CQuantumPubKey() noexcept = default;
+
+    //! Construct a new public key from a given serialization.
+    CQuantumPubKey(std::span<const std::byte> _vch) noexcept;
+
+    // Read-only access for serialization.
+    const std::byte* data() const { return m_pubkey.data(); }
+    static constexpr size_t size() { return SIZE; }
+    auto begin() const { return m_pubkey.cbegin(); }
+    auto end() const { return m_pubkey.cend(); }
+
+    bool friend operator==(const CQuantumPubKey& a, const CQuantumPubKey& b)
+    {
+        return a.m_pubkey == b.m_pubkey;
+    }
+
+    //! Get the KeyID of this public key (hash of its serialization)
+    CKeyID GetID() const
+    {
+        return CKeyID(Hash160(std::span{m_pubkey}.first(size())));
+    }
+
+    bool IsValid() const
+    {
+        return size() > 0;
+    }
+
+    bool VerifyQuantum(const uint256& hash, const std::vector<unsigned char>& vchSig) const;
+};
+
 #endif // BITCOIN_PUBKEY_H

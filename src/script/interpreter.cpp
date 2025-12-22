@@ -1709,7 +1709,7 @@ bool GenericTransactionSignatureChecker<T>::VerifySchnorrSignature(std::span<con
 }
 
 template <class T>
-bool GenericTransactionSignatureChecker<T>::VerifyQuantumSignature(const std::vector<unsigned char>& vchSig, const CPubKey& pubkey, const uint256& sighash) const
+bool GenericTransactionSignatureChecker<T>::VerifyQuantumSignature(const std::vector<unsigned char>& vchSig, const CQuantumPubKey& pubkey, const uint256& sighash) const
 {
     return pubkey.VerifyQuantum(sighash, vchSig);
 }

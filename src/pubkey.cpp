@@ -15,6 +15,8 @@
 #include <uint256.h>
 #include <util/strencodings.h>
 
+#include <hawk.h>
+
 #include <algorithm>
 #include <cassert>
 
@@ -427,4 +429,21 @@ bool CExtPubKey::Derive(CExtPubKey &out, unsigned int _nChild, uint256* bip32_tw
         return false;
     }
     return (!secp256k1_ecdsa_signature_normalize(secp256k1_context_static, nullptr, &sig));
+}
+
+CQuantumPubKey::CQuantumPubKey(std::span<const std::byte> key) noexcept
+{
+    assert(key.size() == SIZE);
+    std::copy(key.begin(), key.end(), m_pubkey.begin());
+}
+
+bool CQuantumPubKey::VerifyQuantum(const uint256 &hash, const std::vector<unsigned char>& vchSig) const {
+    shake_context sc_data;
+    hawk_verify_start(&sc_data);
+    shake_inject(&sc_data, &hash, 256);
+
+    uint8_t tmp[HAWK_TMPSIZE_VERIFY_FAST(LOGN)];
+
+    return hawk_verify_finish(LOGN, vchSig.data(), vchSig.size(), &sc_data,
+        m_pubkey.data(), m_pubkey.size(), &tmp, sizeof tmp);
 }

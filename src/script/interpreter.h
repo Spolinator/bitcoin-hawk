@@ -23,6 +23,7 @@ class CPubKey;
 class CScript;
 class CScriptNum;
 class XOnlyPubKey;
+class CQuantumPubKey;
 struct CScriptWitness;
 
 /** Signature hash types/flags */
@@ -336,7 +337,7 @@ private:
 protected:
     virtual bool VerifyECDSASignature(const std::vector<unsigned char>& vchSig, const CPubKey& vchPubKey, const uint256& sighash) const;
     virtual bool VerifySchnorrSignature(std::span<const unsigned char> sig, const XOnlyPubKey& pubkey, const uint256& sighash) const;
-    virtual bool VerifyQuantumSignature(const std::vector<unsigned char>& vchSig, const CPubKey& vchPubKey, const uint256& sighash) const;
+    virtual bool VerifyQuantumSignature(const std::vector<unsigned char>& vchSig, const CQuantumPubKey& vchPubKey, const uint256& sighash) const;
 
 public:
     GenericTransactionSignatureChecker(const T* txToIn, unsigned int nInIn, const CAmount& amountIn, MissingDataBehavior mdb) : txTo(txToIn), m_mdb(mdb), nIn(nInIn), amount(amountIn), txdata(nullptr) {}

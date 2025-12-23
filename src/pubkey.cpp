@@ -14,11 +14,12 @@
 #include <span.h>
 #include <uint256.h>
 #include <util/strencodings.h>
-
-#include <hawk.h>
-
 #include <algorithm>
 #include <cassert>
+
+extern "C" {
+#include <hawk.h>
+}
 
 using namespace util::hex_literals;
 
@@ -440,10 +441,10 @@ CQuantumPubKey::CQuantumPubKey(std::span<const unsigned char> key) noexcept
 bool CQuantumPubKey::VerifyQuantum(const uint256& hash, std::span<const unsigned char> sigbytes) const {
     shake_context sc_data;
     hawk_verify_start(&sc_data);
-    shake_inject(&sc_data, &hash, 256);
+    shake_inject(&sc_data, hash.data(), hash.size());
 
     uint8_t tmp[HAWK_TMPSIZE_VERIFY_FAST(LOGN)];
 
     return hawk_verify_finish(LOGN, sigbytes.data(), sigbytes.size(), &sc_data,
-        m_pubkey.data(), m_pubkey.size(), &tmp, sizeof tmp);
+        m_pubkey.data(), m_pubkey.size(), &tmp, sizeof tmp) == 1;
 }

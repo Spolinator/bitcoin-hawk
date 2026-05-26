@@ -121,9 +121,10 @@ std::vector<std::pair<CTxDestination, CAmount>> ParseOutputs(const UniValue& out
                 throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, std::string("Invalid Bitcoin address: ") + name_);
             }
 
+            /* CHECK REMOVED TO ALLOW FOR QUICK GENERATION OF UTXO THE SAME WALLET
             if (!destinations.insert(destination).second) {
                 throw JSONRPCError(RPC_INVALID_PARAMETER, std::string("Invalid parameter, duplicated address: ") + name_);
-            }
+            }*/
             parsed_outputs.emplace_back(destination, amount);
         }
     }

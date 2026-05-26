@@ -17,10 +17,11 @@ RUN --mount=type=cache,target=/build/build_aws \
   -DENABLE_TESTS=OFF \
   -DBUILD_BITCOIN_WALLET=ON \
   -DENABLE_BENCH=OFF \
+  -DWITH_ZMQ=ON \
   -DCMAKE_TOOLCHAIN_FILE=depends/x86_64-pc-linux-gnu/toolchain.cmake && \
-  cmake --build build_aws --parallel 8 && \
+  cmake --build build_aws --parallel 8 --target bitcoind bitcoin-cli && \
   mkdir -p /build/output && \
-  cp -r build_aws/bin/. /build/output/
+  cp build_aws/bin/bitcoind build_aws/bin/bitcoin-cli /build/output/
 
 FROM scratch
 COPY --from=builder /build/output/ /

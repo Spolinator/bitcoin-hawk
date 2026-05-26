@@ -367,13 +367,17 @@ void Chainstate::MaybeUpdateMempoolForReorg(
         }
 
         // If the transaction spends any coinbase outputs, it must be mature.
+        int maturity = COINBASE_MATURITY;
+        if (Params().GetChainType() == ChainType::REGTEST) {
+            maturity = 0;
+        }
         if (it->GetSpendsCoinbase()) {
             for (const CTxIn& txin : tx.vin) {
                 if (m_mempool->exists(txin.prevout.hash)) continue;
                 const Coin& coin{CoinsTip().AccessCoin(txin.prevout)};
                 assert(!coin.IsSpent());
                 const auto mempool_spend_height{m_chain.Tip()->nHeight + 1};
-                if (coin.IsCoinBase() && mempool_spend_height - coin.nHeight < COINBASE_MATURITY) {
+                if (coin.IsCoinBase() && mempool_spend_height - coin.nHeight < maturity) {
                     return true;
                 }
             }
